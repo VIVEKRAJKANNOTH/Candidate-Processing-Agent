@@ -67,3 +67,10 @@ yarn-error.log
 # Logs
 logs/
 *.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+backend/database/*.db
+backend/database/*.sqlite
