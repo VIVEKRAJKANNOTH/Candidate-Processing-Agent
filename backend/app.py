@@ -99,13 +99,14 @@ def list_candidates():
             properties:
               id:
                 type: string
-                example: 84d8cae2-d942-4a2d-b6a1-f14828c18e92
               name:
                 type: string
-                example: John Doe
               email:
                 type: string
-                example: john@example.com
+              company:
+                type: string
+              status:
+                type: string
       500:
         description: Server error
     """
@@ -113,12 +114,18 @@ def list_candidates():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        cursor.execute("SELECT id, name, email FROM candidates")
+        cursor.execute("SELECT id, name, email, company, status FROM candidates")
         candidates = cursor.fetchall()
         conn.close()
         
         candidates_list = [
-            {'id': c['id'], 'name': c['name'], 'email': c['email']}
+            {
+                'id': c['id'],
+                'name': c['name'],
+                'email': c['email'],
+                'company': c['company'] or '-',
+                'status': c['status']
+            }
             for c in candidates
         ]
         
@@ -207,7 +214,7 @@ def get_candidate(candidate_id):
         
         cursor.execute("""
             SELECT id, name, email, phone, company, designation,
-                   skills, experience_years, resume_path, 
+                   skills, experience_years, resume_path, confidence_scores,
                    status, document_status, created_at
             FROM candidates 
             WHERE id = ?
@@ -219,7 +226,6 @@ def get_candidate(candidate_id):
         if not candidate:
             return jsonify({'error': 'Candidate not found'}), 404
         
-        # Convert to dict and parse JSON fields
         candidate_data = {
             'id': candidate['id'],
             'name': candidate['name'],
@@ -230,6 +236,7 @@ def get_candidate(candidate_id):
             'skills': json.loads(candidate['skills']) if candidate['skills'] else [],
             'experience_years': candidate['experience_years'],
             'resume_path': candidate['resume_path'],
+            'confidence_scores': json.loads(candidate['confidence_scores']) if candidate['confidence_scores'] else {},
             'status': candidate['status'],
             'document_status': candidate['document_status'],
             'created_at': candidate['created_at']
