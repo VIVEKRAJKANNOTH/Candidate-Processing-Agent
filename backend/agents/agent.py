@@ -1,16 +1,11 @@
 """
-Resume Parser Agent with Autonomous Tool Selection
-Agent decides which tools to use from the provided tools_list
+Resume Parser Agent with LangGraph ReAct Agent and Structured Output
+Uses create_react_agent with Pydantic response_format for guaranteed JSON structure
 """
 
 from typing import Dict, Any
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.agents import AgentExecutor, create_tool_calling_agent
-from langchain.prompts import ChatPromptTemplate
-from langchain_core.messages import AIMessage
-from pydantic import BaseModel
-import re
-import json
+from langgraph.prebuilt import create_react_agent
 
 from .tools import tools_list, CandidateInfo
 from .config import GEMINI_API_KEY, GEMINI_MODEL, TEMPERATURE
@@ -23,65 +18,69 @@ from .prompts import SYSTEM_PROMPT, RESUME_PARSING_PROMPT
 
 def parse_resume_with_agent(file_path: str) -> Dict[str, Any]:
     """
-    Parse resume using agent with autonomous tool selection.
-    The agent decides which tools to call based on the file path and task.
+    Parse resume using LangGraph ReAct agent with structured output.
     
+    Uses create_react_agent with response_format parameter to ensure
+    the output always conforms to the CandidateInfo Pydantic schema.
+    
+    Args:
+        file_path: Path to the resume file (PDF or TXT)
+        
+    Returns:
+        Dict with 'success', 'data' (CandidateInfo dict), or 'error'
     """
     try:
         print(f"\n{'='*60}")
-        print(f"Running Resume Parser Agent on: {file_path}")
+        print(f"Running LangGraph ReAct Agent on: {file_path}")
         print(f"{'='*60}")
         
-        # Initialize LLM (without structured output - agent will use submit_final_response tool)
+        # Initialize LLM
         llm = ChatGoogleGenerativeAI(
             model=GEMINI_MODEL,
             google_api_key=GEMINI_API_KEY,
-            temperature=TEMPERATURE,
-            model_kwargs={
-            "response_mime_type": "application/json",  # Force JSON response
-            "response_schema": CandidateInfo.model_json_schema()  # Provide schema
-        }
+            temperature=TEMPERATURE
         )
         
-        # Create agent prompt with placeholders
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", SYSTEM_PROMPT),
-            ("human", RESUME_PARSING_PROMPT + "\n\nFile to process: {input}"),
-            ("placeholder", "{agent_scratchpad}")
-        ])
+        # Combine system prompt with parsing instructions
+        full_prompt = f"{SYSTEM_PROMPT}\n\n{RESUME_PARSING_PROMPT}"
         
-        # Create agent with all tools from tools_list
-        # Agent will autonomously decide which tools to use
-        agent = create_tool_calling_agent(llm, tools_list, prompt)
-        
-        agent_executor = AgentExecutor(
-            agent=agent,
+        # Create ReAct agent with structured output via response_format
+        graph = create_react_agent(
+            model=llm,
             tools=tools_list,
-            verbose=True,
-            handle_parsing_errors=True,
-            max_iterations=10,
-            return_intermediate_steps=True
+            prompt=full_prompt,
+            response_format=CandidateInfo  # Pydantic schema ensures JSON structure
         )
         
-        # Run agent with the file path - agent decides which tools to call
-        result = agent_executor.invoke({
-            "input": f"Parse the resume at this file path and extract all candidate information: {file_path}"
+        # Invoke agent with the file path
+        result = graph.invoke({
+            "messages": [("user", f"Parse the resume at this file path and extract all candidate information: {file_path}")]
         })
-
-        output = result["output"]
-        print(f"\nAgent Output: {output}")
         
-        # Strip markdown code blocks and parse
-        json_match = re.search(r'```json\s*([\s\S]*?)\s*```', output)
-        if json_match:
-            parsed_data = json.loads(json_match.group(1))
+        # Extract the structured response
+        structured_response = result.get("structured_response")
+        
+        if structured_response:
+            print(f"\nStructured output received")
+            return {
+                'success': True,
+                'data': structured_response.model_dump() if hasattr(structured_response, 'model_dump') else structured_response
+            }
         else:
-            parsed_data = json.loads(output)  # Try parsing as plain JSON
-
-        return {
-            'success': True,
-            'data': parsed_data
-        }
+            # Fallback: check messages for any response
+            messages = result.get("messages", [])
+            if messages:
+                last_message = messages[-1]
+                print(f"\nNo structured_response, using last message")
+                return {
+                    'success': True,
+                    'data': {'raw_response': str(last_message.content) if hasattr(last_message, 'content') else str(last_message)},
+                    'warning': 'structured_response was None, returning raw message'
+                }
+            return {
+                'success': False,
+                'error': 'No response received from agent'
+            }
         
     except Exception as e:
         import traceback
@@ -94,4 +93,3 @@ def parse_resume_with_agent(file_path: str) -> Dict[str, Any]:
             'error': str(e),
             'traceback': error_trace
         }
-

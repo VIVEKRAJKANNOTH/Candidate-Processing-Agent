@@ -3,15 +3,19 @@ flask-cors==4.0.0
 flasgger==0.9.7.1
 python-dotenv==1.0.0
 
-# LangChain and AI packages - compatible versions for structured output
-langchain==0.3.13
-langchain-core==0.3.28
-langchain-google-genai==2.0.8
-pydantic==2.10.5
-pydantic-core==2.27.2
+# LangChain and AI packages - compatible versions for LangGraph structured output
+langchain==1.0.5
+langchain-core==1.1.1
+langchain-google-genai>=3.2.0
+langchain-text-splitters==1.0.0
+langsmith==0.4.27
+pydantic>=2.10.0
 
-# Optional but recommended
-langgraph==0.2.55
+# LangGraph with structured output support (response_format parameter)
+langgraph==1.0.2
+langgraph-prebuilt==1.0.2
+langgraph-checkpoint==2.1.1
+langgraph-sdk==0.2.6
 
 # Resume processing
 PyPDF2==3.0.1
