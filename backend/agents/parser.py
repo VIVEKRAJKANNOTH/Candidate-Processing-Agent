@@ -13,6 +13,7 @@ from .tools import (
     CandidateInfo,
     extract_text_from_pdf,
     extract_text_from_txt,
+    extract_text_from_docx,
     validate_candidate_data,
     save_candidate_to_db,
 )
@@ -26,8 +27,11 @@ from .prompts import RESUME_PARSING_PROMPT
 
 def extract_resume_text(file_path: str) -> str:
     """Extract text from resume file based on extension (uses tools.py)"""
-    if file_path.lower().endswith('.pdf'):
+    file_lower = file_path.lower()
+    if file_lower.endswith('.pdf'):
         return extract_text_from_pdf.invoke(file_path)
+    elif file_lower.endswith('.docx'):
+        return extract_text_from_docx.invoke(file_path)
     else:
         return extract_text_from_txt.invoke(file_path)
 

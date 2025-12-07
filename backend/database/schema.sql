@@ -1,5 +1,3 @@
--- TraqCheck CandidateVerify Database Schema (SQLite)
--- This schema supports the candidate verification workflow
 
 -- Main candidates table
 CREATE TABLE IF NOT EXISTS candidates (

@@ -123,6 +123,26 @@ def extract_text_from_txt(file_path: str) -> str:
         return f"Error reading file: {str(e)}"
 
 
+@tool
+def extract_text_from_docx(file_path: str) -> str:
+    """
+    Extract text content from a DOCX (Word) file.
+    
+    Args:
+        file_path: Path to the DOCX file
+        
+    Returns:
+        str: Extracted text from the DOCX
+    """
+    try:
+        from docx import Document
+        doc = Document(file_path)
+        text = "\n".join([para.text for para in doc.paragraphs])
+        return text
+    except Exception as e:
+        return f"Error extracting DOCX: {str(e)}"
+
+
 # ============================================================================
 # DATA VALIDATOR TOOL
 # ============================================================================
