@@ -1,0 +1,12 @@
+John Doe
+Senior Software Engineer
+Email: john.doe@example.com
+Phone: +91-9876543210
+
+Experience:
+Senior Software Engineer at Tech Corp (2018-Present)
+- Developed scalable web applications using Python and Django
+- Led a team of 5 developers
+
+Skills:
+Python, Django, React, Docker, Kubernetes, AWS

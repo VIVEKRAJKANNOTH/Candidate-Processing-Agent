@@ -1,0 +1,40 @@
+VIVEK RAJKANNOTH
+vivek.raj@email.com | +91-9876543210
+
+PROFESSIONAL SUMMARY
+Senior Software Engineer with 6 years of experience in full-stack development and AI/ML solutions.
+
+WORK EXPERIENCE
+
+Senior Software Engineer
+TechCorp Solutions Pvt Ltd | Bangalore, India
+Jan 2022 - Present
+- Leading development of AI-powered candidate verification platform
+- Architecting scalable microservices using Python and FastAPI
+- Implementing LangGraph agents for document processing
+
+Software Engineer
+InnovateTech | Bangalore, India  
+Jun 2019 - Dec 2021
+- Developed REST APIs using Flask and Django
+- Built React-based front-end applications
+- Integrated with Google Cloud Platform services
+
+TECHNICAL SKILLS
+- Programming: Python, JavaScript, TypeScript, SQL
+- Frameworks: Flask, FastAPI, React, LangChain, LangGraph
+- Databases: PostgreSQL, MongoDB, SQLite
+- Cloud: Google Cloud Platform, AWS
+- AI/ML: Gemini AI, OpenAI, Machine Learning, NLP
+- Tools: Docker, Git, Kubernetes
+
+EDUCATION
+B.Tech in Computer Science Engineering
+National Institute of Technology
+2015 - 2019
+
+CERTIFICATIONS
+- Google Cloud Professional Developer
+- AWS Solutions Architect
+
+Total Professional Experience: 6 years

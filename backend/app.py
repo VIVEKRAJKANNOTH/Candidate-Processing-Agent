@@ -318,5 +318,93 @@ def get_candidate(candidate_id):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/agent/chat', methods=['POST'])
+def agent_chat():
+    """Agent chat endpoint for resume parsing
+    ---
+    tags:
+      - Agent
+    consumes:
+      - multipart/form-data
+    parameters:
+      - in: formData
+        name: resume
+        type: file
+        required: true
+        description: Resume file (PDF or TXT)
+      - in: formData
+        name: message
+        type: string
+        required: false
+        description: Optional message to the agent
+    responses:
+      200:
+        description: Resume parsed successfully
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+            data:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                phone:
+                  type: string
+                company:
+                  type: string
+                designation:
+                  type: string
+                skills:
+                  type: array
+                  items:
+                    type: string
+                experience_years:
+                  type: integer
+      400:
+        description: Bad request
+      500:
+        description: Server error
+    """
+    try:
+        from agents.agent import parse_resume_with_agent
+        import os
+        from werkzeug.utils import secure_filename
+        
+        # Check if file is present
+        if 'resume' not in request.files:
+            return jsonify({'error': 'No resume file provided'}), 400
+        
+        file = request.files['resume']
+        
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        # Save file temporarily
+        filename = secure_filename(file.filename)
+        upload_folder = 'uploads/resumes'
+        os.makedirs(upload_folder, exist_ok=True)
+        file_path = os.path.join(upload_folder, filename)
+        file.save(file_path)
+        
+        # Parse with agent
+        result = parse_resume_with_agent(file_path)
+        
+        # Clean up uploaded file
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 500
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
