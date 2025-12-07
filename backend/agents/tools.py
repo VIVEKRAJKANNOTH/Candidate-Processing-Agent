@@ -265,6 +265,7 @@ def validate_candidate_data(candidate_data: str) -> Dict[str, Any]:
 def save_candidate_to_db(candidate_json: str, resume_path: str) -> Dict[str, Any]:
     """
     Save parsed candidate information to the database.
+    If candidate with same email exists, updates the existing record.
     
     Args:
         candidate_json: JSON string with candidate data (name, email, phone, company, 
@@ -272,7 +273,7 @@ def save_candidate_to_db(candidate_json: str, resume_path: str) -> Dict[str, Any
         resume_path: Path to the original resume file
     
     Returns:
-        Dict with success status and candidate_id or error message
+        Dict with success status, candidate_id, is_update flag, and message
     """
     import sqlite3
     import uuid
@@ -282,50 +283,94 @@ def save_candidate_to_db(candidate_json: str, resume_path: str) -> Dict[str, Any
     try:
         # Parse candidate data
         candidate = json.loads(candidate_json)
-        
-        # Generate UUID for candidate
-        candidate_id = str(uuid.uuid4())
+        email = candidate.get('email', '')
         
         # Connect to database
         db_path = "database/traqcheck.db"
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
+        # Check if candidate with same email already exists
+        cursor.execute("SELECT id FROM candidates WHERE email = ?", (email,))
+        existing = cursor.fetchone()
+        
         # Convert skills list to JSON string
         skills_json = json.dumps(candidate.get('skills', []))
         confidence_json = json.dumps(candidate.get('confidence_scores', {}))
         
-        # Insert candidate
-        cursor.execute("""
-            INSERT INTO candidates (
-                id, name, email, phone, company, designation, 
-                skills, experience_years, resume_path, confidence_scores,
-                status, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            candidate_id,
-            candidate.get('name', ''),
-            candidate.get('email', ''),
-            candidate.get('phone', ''),
-            candidate.get('company', ''),
-            candidate.get('designation', ''),
-            skills_json,
-            candidate.get('experience_years', 0),
-            resume_path,
-            confidence_json,
-            'PARSED',
-            datetime.utcnow().isoformat(),
-            datetime.utcnow().isoformat()
-        ))
-        
-        conn.commit()
-        conn.close()
-        
-        return {
-            'success': True,
-            'candidate_id': candidate_id,
-            'message': f'Candidate saved successfully with ID: {candidate_id}'
-        }
+        if existing:
+            # UPDATE existing candidate
+            candidate_id = existing[0]
+            cursor.execute("""
+                UPDATE candidates SET
+                    name = ?,
+                    phone = ?,
+                    company = ?,
+                    designation = ?,
+                    skills = ?,
+                    experience_years = ?,
+                    resume_path = ?,
+                    confidence_scores = ?,
+                    status = ?,
+                    updated_at = ?
+                WHERE email = ?
+            """, (
+                candidate.get('name', ''),
+                candidate.get('phone', ''),
+                candidate.get('company', ''),
+                candidate.get('designation', ''),
+                skills_json,
+                candidate.get('experience_years', 0),
+                resume_path,
+                confidence_json,
+                'PARSED',
+                datetime.utcnow().isoformat(),
+                email
+            ))
+            
+            conn.commit()
+            conn.close()
+            
+            return {
+                'success': True,
+                'candidate_id': candidate_id,
+                'is_update': True,
+                'message': f'Candidate already existed. Data updated for ID: {candidate_id}'
+            }
+        else:
+            # INSERT new candidate
+            candidate_id = str(uuid.uuid4())
+            cursor.execute("""
+                INSERT INTO candidates (
+                    id, name, email, phone, company, designation, 
+                    skills, experience_years, resume_path, confidence_scores,
+                    status, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                candidate_id,
+                candidate.get('name', ''),
+                email,
+                candidate.get('phone', ''),
+                candidate.get('company', ''),
+                candidate.get('designation', ''),
+                skills_json,
+                candidate.get('experience_years', 0),
+                resume_path,
+                confidence_json,
+                'PARSED',
+                datetime.utcnow().isoformat(),
+                datetime.utcnow().isoformat()
+            ))
+            
+            conn.commit()
+            conn.close()
+            
+            return {
+                'success': True,
+                'candidate_id': candidate_id,
+                'is_update': False,
+                'message': f'New candidate saved with ID: {candidate_id}'
+            }
         
     except Exception as e:
         return {

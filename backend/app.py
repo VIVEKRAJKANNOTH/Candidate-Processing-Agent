@@ -1,6 +1,6 @@
 """
 Flask Backend API for TraqCheck CandidateVerify
-Simple API with basic candidate endpoints
+
 """
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -83,124 +83,47 @@ def health_check():
     return jsonify({'status': 'ok', 'message': 'API is running'})
 
 
-@app.route('/candidates', methods=['POST'])
-def create_candidate():
-    """Create a new candidate
+@app.route('/candidates', methods=['GET'])
+def list_candidates():
+    """List all candidates
     ---
     tags:
       - Candidates
-    parameters:
-      - in: body
-        name: body
-        required: true
-        schema:
-          type: object
-          required:
-            - name
-            - email
-            - phone
-            - resume_path
-          properties:
-            name:
-              type: string
-              example: John Doe
-            email:
-              type: string
-              example: john@example.com
-            phone:
-              type: string
-              example: +91-1234567890
-            company:
-              type: string
-              example: Tech Corp
-            designation:
-              type: string
-              example: Senior Developer
-            skills:
-              type: array
-              items:
-                type: string
-              example: ["Python", "SQL", "Machine Learning"]
-            experience_years:
-              type: integer
-              example: 5
-            resume_path:
-              type: string
-              example: /uploads/resume.pdf
     responses:
-      201:
-        description: Candidate created successfully
+      200:
+        description: List of candidates
         schema:
-          type: object
-          properties:
-            message:
-              type: string
-              example: Candidate created successfully
-            candidate_id:
-              type: string
-              example: 123e4567-e89b-12d3-a456-426614174000
-      400:
-        description: Bad request (missing required fields or duplicate entry)
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                example: 84d8cae2-d942-4a2d-b6a1-f14828c18e92
+              name:
+                type: string
+                example: John Doe
+              email:
+                type: string
+                example: john@example.com
       500:
         description: Server error
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
     """
     try:
-        data = request.get_json()
-        
-        # Validate required fields
-        required_fields = ['name', 'email', 'phone', 'resume_path']
-        for field in required_fields:
-            if field not in data:
-                return jsonify({'error': f'Missing required field: {field}'}), 400
-        
-        # Generate UUID for candidate
-        candidate_id = str(uuid.uuid4())
-        
-        # Convert skills to JSON string if present
-        skills = json.dumps(data.get('skills', [])) if data.get('skills') else None
-        
-        # Insert into database
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        cursor.execute("""
-            INSERT INTO candidates (
-                id, name, email, phone, company, designation,
-                skills, experience_years, resume_path, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            candidate_id,
-            data['name'],
-            data['email'],
-            data['phone'],
-            data.get('company'),
-            data.get('designation'),
-            skills,
-            data.get('experience_years'),
-            data['resume_path'],
-            'PARSED'
-        ))
-        
-        conn.commit()
+        cursor.execute("SELECT id, name, email FROM candidates")
+        candidates = cursor.fetchall()
         conn.close()
         
-        return jsonify({
-            'message': 'Candidate created successfully',
-            'candidate_id': candidate_id
-        }), 201
+        candidates_list = [
+            {'id': c['id'], 'name': c['name'], 'email': c['email']}
+            for c in candidates
+        ]
         
-    except sqlite3.IntegrityError as e:
-        return jsonify({'error': 'Duplicate entry or constraint violation'}), 400
+        return jsonify(candidates_list), 200
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -318,12 +241,12 @@ def get_candidate(candidate_id):
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/agent/chat', methods=['POST'])
-def agent_chat():
-    """Agent chat endpoint for resume parsing
+@app.route('/candidates/upload', methods=['POST'])
+def parse_with_structured_llm():
+    """Upload resume and parse using direct structured output parser
     ---
     tags:
-      - Agent
+      - Candidates
     consumes:
       - multipart/form-data
     parameters:
@@ -331,46 +254,61 @@ def agent_chat():
         name: resume
         type: file
         required: true
-        description: Resume file (PDF or TXT)
-      - in: formData
-        name: message
-        type: string
-        required: false
-        description: Optional message to the agent
+        description: Resume file (PDF or TXT format)
     responses:
       200:
-        description: Resume parsed successfully
+        description: Resume parsed and candidate saved successfully
         schema:
           type: object
           properties:
             success:
               type: boolean
+              example: true
             data:
               type: object
               properties:
                 name:
                   type: string
+                  example: John Doe
                 email:
                   type: string
+                  example: john@example.com
                 phone:
                   type: string
+                  example: +91-9876543210
                 company:
                   type: string
+                  example: Tech Corp
                 designation:
                   type: string
+                  example: Senior Software Engineer
                 skills:
                   type: array
                   items:
                     type: string
+                  example: ["Python", "JavaScript", "SQL"]
                 experience_years:
                   type: integer
+                  example: 5
+                confidence_scores:
+                  type: object
+                  description: Confidence scores for each extracted field
+                validation_status:
+                  type: string
+                  example: valid
+                candidate_id:
+                  type: string
+                  example: 550e8400-e29b-41d4-a716-446655440000
+                db_status:
+                  type: string
+                  example: Saved successfully
       400:
-        description: Bad request
+        description: Bad request (no file provided)
       500:
-        description: Server error
+        description: Server error or parsing failed
     """
     try:
-        from agents.agent import parse_resume_with_agent
+        from agents.parser import parse_with_structured_llm
         import os
         from werkzeug.utils import secure_filename
         
@@ -390,12 +328,8 @@ def agent_chat():
         file_path = os.path.join(upload_folder, filename)
         file.save(file_path)
         
-        # Parse with agent
-        result = parse_resume_with_agent(file_path)
-        
-        # Clean up uploaded file
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        # Parse with direct structured output parser
+        result = parse_with_structured_llm(file_path)
         
         if result.get('success'):
             return jsonify(result), 200
@@ -403,7 +337,12 @@ def agent_chat():
             return jsonify(result), 500
             
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        import traceback
+        return jsonify({
+            'success': False, 
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
 
 
 if __name__ == '__main__':

@@ -46,8 +46,6 @@ Required fields:
 
 Also provide confidence scores (0.0 to 1.0) for each extracted field.
 
-IMPORTANT: After extracting the data, you MUST use the validate_candidate_data tool 
-to validate email and phone formats before returning your final response.
 
 """
 
