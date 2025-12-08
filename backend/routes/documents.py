@@ -63,10 +63,7 @@ def submit_documents(candidate_id):
             conn.close()
             return jsonify({'success': False, 'error': 'Candidate not found'}), 404
         
-        # Check if documents already submitted
-        if candidate['document_status'] == 'SUBMITTED':
-            conn.close()
-            return jsonify({'success': False, 'error': 'Documents have already been submitted'}), 400
+        # Allow resubmission - no restriction on document_status
         
         # Validate files are present
         if 'pan_card' not in request.files or 'aadhaar_card' not in request.files:
