@@ -105,7 +105,12 @@ class DatabaseConnection:
     def close(self):
         """Close the database connection"""
         if self.conn:
-            self.conn.close()
+            # Turso libsql connections may not have close method
+            if hasattr(self.conn, 'close'):
+                try:
+                    self.conn.close()
+                except Exception:
+                    pass  # Ignore close errors
             self.conn = None
 
 
