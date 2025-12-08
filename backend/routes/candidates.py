@@ -45,6 +45,14 @@ def list_candidates():
         candidates = cursor.fetchall()
         conn.close()
         
+        # Debug: Log raw row info
+        import sys
+        if candidates:
+            first_row = candidates[0]
+            print(f"[DEBUG] Row type: {type(first_row)}", file=sys.stderr)
+            print(f"[DEBUG] Row._data: {getattr(first_row, '_data', 'N/A')}", file=sys.stderr)
+            print(f"[DEBUG] Row keys: {list(first_row.keys()) if hasattr(first_row, 'keys') else 'N/A'}", file=sys.stderr)
+        
         candidates_list = [
             {
                 'id': c['id'],
@@ -60,7 +68,8 @@ def list_candidates():
         return jsonify(candidates_list), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
 
 @candidates_bp.route('/candidates/<candidate_id>', methods=['GET'])
