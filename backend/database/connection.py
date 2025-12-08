@@ -36,28 +36,6 @@ class TursoRowWrapper:
         return self._data.get(key, default)
 
 
-class TursoCursorWrapper:
-    """Wrapper to make Turso cursor behave like sqlite3 cursor"""
-    def __init__(self, result, columns=None):
-        self._result = result
-        self._columns = columns or []
-        self._rows = list(result) if result else []
-        self._index = 0
-        self.rowcount = len(self._rows)
-    
-    def fetchone(self):
-        if self._index < len(self._rows):
-            row = self._rows[self._index]
-            self._index += 1
-            return TursoRowWrapper(row, self._columns)
-        return None
-    
-    def fetchall(self):
-        remaining = self._rows[self._index:]
-        self._index = len(self._rows)
-        return [TursoRowWrapper(row, self._columns) for row in remaining]
-
-
 class DatabaseConnection:
     """
     Unified database connection that works with both SQLite and Turso.
@@ -68,6 +46,8 @@ class DatabaseConnection:
         self.conn = None
         self.is_turso = USE_TURSO
         self._last_columns = []
+        self._last_rows = []  # Store fetched rows
+        self._fetch_index = 0
     
     def cursor(self):
         """Return self as cursor for compatibility with sqlite3 patterns"""
@@ -76,11 +56,15 @@ class DatabaseConnection:
     def execute(self, query: str, params: Tuple = ()) -> 'DatabaseConnection':
         """Execute a query with parameters"""
         if self.is_turso:
-            # Turso uses libsql
+            # Turso uses libsql - execute and fetch all rows immediately
             result = self.conn.execute(query, params)
-            # Store column names from description
+            # Get column names from description
             self._last_columns = [desc[0] for desc in (result.description or [])]
-            self._last_result = result
+            # Fetch all rows immediately and store them
+            self._last_rows = result.fetchall()
+            self._fetch_index = 0
+            # Store rowcount
+            self._rowcount = result.rowcount if hasattr(result, 'rowcount') else len(self._last_rows)
         else:
             self._cursor.execute(query, params)
             if self._cursor.description:
@@ -91,24 +75,26 @@ class DatabaseConnection:
     def fetchone(self) -> Optional[Any]:
         """Fetch one result"""
         if self.is_turso:
-            rows = list(self._last_result)
-            if rows:
-                return TursoRowWrapper(rows[0], self._last_columns)
+            if self._fetch_index < len(self._last_rows):
+                row = self._last_rows[self._fetch_index]
+                self._fetch_index += 1
+                return TursoRowWrapper(row, self._last_columns)
             return None
         return self._cursor.fetchone()
     
     def fetchall(self) -> List[Any]:
         """Fetch all results"""
         if self.is_turso:
-            rows = list(self._last_result)
-            return [TursoRowWrapper(row, self._last_columns) for row in rows]
+            remaining = self._last_rows[self._fetch_index:]
+            self._fetch_index = len(self._last_rows)
+            return [TursoRowWrapper(row, self._last_columns) for row in remaining]
         return self._cursor.fetchall()
     
     @property
     def rowcount(self):
         """Return number of affected rows"""
         if self.is_turso:
-            return getattr(self._last_result, 'rowcount', 0)
+            return getattr(self, '_rowcount', 0)
         return self._cursor.rowcount
     
     def commit(self):
