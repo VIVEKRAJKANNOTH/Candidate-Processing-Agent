@@ -248,6 +248,64 @@ def get_candidate(candidate_id):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/candidates/<candidate_id>/request-documents', methods=['POST'])
+def request_documents(candidate_id):
+    """Request documents from a candidate (sends email)
+    ---
+    tags:
+      - Candidates
+    parameters:
+      - in: path
+        name: candidate_id
+        required: true
+        type: string
+        description: Candidate UUID
+    responses:
+      200:
+        description: Email generated successfully
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+            candidate_id:
+              type: string
+            candidate_name:
+              type: string
+            candidate_email:
+              type: string
+            email:
+              type: object
+              properties:
+                subject:
+                  type: string
+                body:
+                  type: string
+            deadline:
+              type: string
+            upload_link:
+              type: string
+      404:
+        description: Candidate not found
+      500:
+        description: Server error
+    """
+    try:
+        from agents.agent import generate_document_request_email_agent
+        
+        result = generate_document_request_email_agent(candidate_id)
+        
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
+            if 'not found' in result.get('error', '').lower():
+                return jsonify(result), 404
+            return jsonify(result), 500
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/candidates/upload', methods=['POST'])
 def parse_with_structured_llm():
     """Upload resume and parse using direct structured output parser

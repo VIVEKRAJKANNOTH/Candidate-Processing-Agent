@@ -79,6 +79,211 @@ class CandidateInfo(BaseModel):
         }
 
 
+class DocumentRequestEmail(BaseModel):
+    """Simplified structured output for document request email"""
+    
+    candidate_name: str = Field(description="Name of the candidate")
+    candidate_email: str = Field(description="Email address of the candidate")
+    subject: str = Field(description="Email subject line")
+    body: str = Field(description="Complete email body text")
+    upload_link: str = Field(description="Document upload link for the candidate")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "candidate_name": "John Doe",
+                "candidate_email": "john@example.com",
+                "subject": "Document Verification Request - TraqCheck",
+                "body": "Dear John Doe,\n\nWe are reaching out regarding...",
+                "upload_link": "https://traqcheck.com/upload/uuid-123"
+            }
+        }
+
+
+# ============================================================================
+# EMAIL SENDER TOOL (Gmail SMTP)
+# ============================================================================
+
+@tool
+def send_email_gmail(
+    to_email: str,
+    subject: str,
+    body: str
+) -> Dict[str, Any]:
+    """
+    Send an email using Gmail SMTP.
+    
+    Args:
+        to_email: Recipient email address
+        subject: Email subject line
+        body: Email body content
+        
+    Returns:
+        Dict with status and message
+    """
+    import os
+    import smtplib
+    from email.message import EmailMessage
+    from dotenv import load_dotenv
+    
+    # Load environment variables
+    load_dotenv()
+    
+    try:
+        # Get Gmail credentials from environment
+        gmail_address = os.getenv('GMAIL_ADDRESS')
+        gmail_app_password = os.getenv('GMAIL_APP_PASSWORD')
+        
+        # Debug: print env status (redacted password)
+        print(f"[DEBUG] GMAIL_ADDRESS: {gmail_address}")
+        print(f"[DEBUG] GMAIL_APP_PASSWORD set: {(gmail_app_password)}")
+        
+        if not gmail_address or not gmail_app_password:
+            # Return mock response for testing when credentials not configured
+            print(f"[MOCK] Gmail credentials not configured - simulating email send")
+            return {
+                'success': True,
+                'mock': True,
+                'status': 'pending',
+                'to': to_email,
+                'subject': subject,
+                'message': 'Email simulated (no Gmail credentials configured)'
+            }
+        
+        # Create the email message
+        msg = EmailMessage()
+        msg['Subject'] = subject
+        msg['From'] = gmail_address
+        msg['To'] = to_email
+        msg.set_content(body)
+        
+        # Also set HTML content for better formatting
+        html_body = body.replace('\n', '<br>')
+        msg.add_alternative(f"<html><body>{html_body}</body></html>", subtype='html')
+        
+        # Send via Gmail SMTP
+        # Strip spaces from app password (Gmail shows it with spaces but should be used without)
+        gmail_app_password = gmail_app_password.replace(' ', '')
+        
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(gmail_address, gmail_app_password)
+            smtp.send_message(msg)
+        
+        print(f"Email sent successfully to: {to_email}")
+        
+        return {
+            'success': True,
+            'status': 'sent',
+            'to': to_email,
+            'from': gmail_address,
+            'subject': subject,
+            'message': 'Email sent successfully via Gmail'
+        }
+        
+    except smtplib.SMTPAuthenticationError as e:
+        print(f"[ERROR] SMTP Auth Error: {e}")
+        return {
+            'success': False,
+            'error': f'Gmail authentication failed: {str(e)}. Ensure 2FA is ON and use App Password from https://myaccount.google.com/apppasswords',
+            'details': str(e),
+            'to': to_email,
+            'subject': subject
+        }
+    except Exception as e:
+        print(f"[ERROR] SMTP Error: {e}")
+        return {
+            'success': False,
+            'error': str(e),
+            'to': to_email,
+            'subject': subject
+        }
+
+
+# ============================================================================
+# DATABASE UPDATE TOOL - Candidate Document Status
+# ============================================================================
+
+@tool
+def update_candidate_document_status(
+    candidate_id: str,
+    document_status: str = "REQUESTED"
+) -> Dict[str, Any]:
+    """
+    Update candidate's document_status and documents_requested_at in the database.
+    
+    Args:
+        candidate_id: UUID of the candidate
+        document_status: Status to set (e.g., 'REQUESTED', 'SUBMITTED', 'VERIFIED')
+        
+    Returns:
+        Dict with success status and updated fields
+    """
+    import sqlite3
+    from pathlib import Path
+    from datetime import datetime
+    
+    try:
+        # Database path
+        db_path = Path(__file__).parent.parent / 'database' / 'candidates.db'
+        
+        # Current timestamp
+        now = datetime.now().isoformat()
+        
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+        
+        # Update candidate document status
+        if document_status == "REQUESTED":
+            cursor.execute("""
+                UPDATE candidates 
+                SET document_status = ?, 
+                    documents_requested_at = ?,
+                    updated_at = ?
+                WHERE id = ?
+            """, (document_status, now, now, candidate_id))
+        elif document_status == "SUBMITTED":
+            cursor.execute("""
+                UPDATE candidates 
+                SET document_status = ?, 
+                    documents_submitted_at = ?,
+                    updated_at = ?
+                WHERE id = ?
+            """, (document_status, now, now, candidate_id))
+        else:
+            cursor.execute("""
+                UPDATE candidates 
+                SET document_status = ?, 
+                    updated_at = ?
+                WHERE id = ?
+            """, (document_status, now, candidate_id))
+        
+        if cursor.rowcount == 0:
+            conn.close()
+            return {
+                'success': False,
+                'error': f'Candidate {candidate_id} not found'
+            }
+        
+        conn.commit()
+        conn.close()
+        
+        print(f"[DB] Updated candidate {candidate_id}: document_status={document_status}")
+        
+        return {
+            'success': True,
+            'candidate_id': candidate_id,
+            'document_status': document_status,
+            'updated_at': now
+        }
+        
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e),
+            'candidate_id': candidate_id
+        }
+
+
 # ============================================================================
 # TOOLS
 # ============================================================================
@@ -141,6 +346,49 @@ def extract_text_from_docx(file_path: str) -> str:
         return text
     except Exception as e:
         return f"Error extracting DOCX: {str(e)}"
+
+
+@tool
+def get_candidate_by_id(candidate_id: str) -> Dict[str, Any]:
+    """
+    Fetch candidate details from the database by ID.
+    
+    Args:
+        candidate_id: UUID of the candidate to fetch
+        
+    Returns:
+        Dict with candidate data or error message
+    """
+    import sqlite3
+    import json
+    
+    try:
+        db_path = "database/traqcheck.db"
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT * FROM candidates WHERE id = ?
+        """, (candidate_id,))
+        
+        row = cursor.fetchone()
+        conn.close()
+        
+        if not row:
+            return {'success': False, 'error': f'Candidate not found: {candidate_id}'}
+        
+        candidate = dict(row)
+        # Parse JSON fields
+        if candidate.get('skills'):
+            candidate['skills'] = json.loads(candidate['skills'])
+        if candidate.get('confidence_scores'):
+            candidate['confidence_scores'] = json.loads(candidate['confidence_scores'])
+            
+        return {'success': True, 'candidate': candidate}
+        
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
 
 
 # ============================================================================

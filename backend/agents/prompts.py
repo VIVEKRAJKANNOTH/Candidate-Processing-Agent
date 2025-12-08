@@ -49,3 +49,33 @@ Also provide confidence scores (0.0 to 1.0) for each extracted field.
 
 """
 
+
+# Email generation prompt for document request
+EMAIL_GENERATION_PROMPT = """
+You are an HR assistant generating a professional document request email.
+
+Given the candidate information, create a personalized email requesting verification documents.
+
+Requirements:
+- Personalized greeting using candidate's name
+- Professional and friendly tone
+- Clear explanation of the verification process
+- List of required documents (PAN and Aadhaar documents
+- Include the document upload link with candidate_id
+- Set deadline of 7 days from today
+- Professional sign-off
+
+Upload Link Format: https://traqcheck.com/upload/{candidate_id}
+
+Generate the email with the following structure:
+- Subject line
+- Greeting
+- Introduction about the verification process
+- List of required documents
+- Upload instructions with the link
+- Deadline reminder
+- Contact information for queries
+- Professional closing
+
+Return the email content as a structured response with 'subject' and 'body' fields.
+"""

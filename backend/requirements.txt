@@ -19,3 +19,4 @@ langgraph-sdk==0.2.6
 
 # Resume processing
 PyPDF2==3.0.1
+python-docx==1.1.2

@@ -65,6 +65,7 @@ export function DashboardTab() {
                     <table className="w-full">
                         <thead className="bg-slate-700/50">
                             <tr>
+                                <th className="text-left py-3 px-4 text-slate-300 font-medium">ID</th>
                                 <th className="text-left py-3 px-4 text-slate-300 font-medium">Name</th>
                                 <th className="text-left py-3 px-4 text-slate-300 font-medium">Email</th>
                                 <th className="text-left py-3 px-4 text-slate-300 font-medium">Company</th>
@@ -78,6 +79,7 @@ export function DashboardTab() {
                                     onClick={() => openCandidateModal(c.id)}
                                     className="hover:bg-slate-700/30 transition-colors cursor-pointer"
                                 >
+                                    <td className="py-3 px-4 text-slate-500 font-mono text-sm">{c.id.slice(0, 8)}</td>
                                     <td className="py-3 px-4 text-white">{c.name}</td>
                                     <td className="py-3 px-4 text-slate-300">{c.email}</td>
                                     <td className="py-3 px-4 text-slate-300">{c.company}</td>
