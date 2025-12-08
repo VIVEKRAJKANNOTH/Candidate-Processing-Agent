@@ -221,11 +221,19 @@ def update_candidate_document_status(
     from datetime import datetime
     
     try:
-        # Current timestamp
         now = datetime.now().isoformat()
         
         conn = get_db_connection()
         cursor = conn.cursor()
+        
+        # First verify candidate exists (Turso doesn't return accurate rowcount for UPDATE)
+        cursor.execute("SELECT id FROM candidates WHERE id = ?", (candidate_id,))
+        if not cursor.fetchone():
+            conn.close()
+            return {
+                'success': False,
+                'error': f'Candidate {candidate_id} not found'
+            }
         
         # Update candidate document status
         if document_status == "REQUESTED":
@@ -251,13 +259,6 @@ def update_candidate_document_status(
                     updated_at = ?
                 WHERE id = ?
             """, (document_status, now, candidate_id))
-        
-        if cursor.rowcount == 0:
-            conn.close()
-            return {
-                'success': False,
-                'error': f'Candidate {candidate_id} not found'
-            }
         
         conn.commit()
         conn.close()
