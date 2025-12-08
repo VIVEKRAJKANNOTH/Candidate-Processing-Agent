@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { api } from '../services/api'
+import { api, API_BASE } from '../services/api'
 
 export function CandidateProfile({ candidateId, onBack }) {
     const [candidate, setCandidate] = useState(null)
@@ -212,7 +212,7 @@ export function CandidateProfile({ candidateId, onBack }) {
                                 </div>
                             </div>
                             <a
-                                href={`http://localhost:5000/api/resume/${candidate.id}/download`}
+                                href={`${API_BASE}/api/resume/${candidate.id}/download`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition-colors"
@@ -254,7 +254,7 @@ export function CandidateProfile({ candidateId, onBack }) {
                                             </span>
                                         )}
                                         <a
-                                            href={`http://localhost:5000/api/documents/${doc.id}/view`}
+                                            href={`${API_BASE}/api/documents/${doc.id}/view`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition-colors"
@@ -262,7 +262,7 @@ export function CandidateProfile({ candidateId, onBack }) {
                                             👁️ View
                                         </a>
                                         <a
-                                            href={`http://localhost:5000${doc.download_url}`}
+                                            href={`${API_BASE}${doc.download_url}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="px-3 py-1.5 bg-slate-600 hover:bg-slate-500 rounded-lg text-sm font-medium transition-colors"
