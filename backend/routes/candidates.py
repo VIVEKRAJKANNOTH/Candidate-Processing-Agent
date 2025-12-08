@@ -5,7 +5,7 @@ from flask import Blueprint, request, jsonify
 import json
 import os
 from werkzeug.utils import secure_filename
-from utils.db import get_db_connection
+from database.connection import get_db_connection
 
 candidates_bp = Blueprint('candidates', __name__)
 

@@ -1,4 +1,5 @@
-const API_BASE = 'http://localhost:5000'
+// Use environment variable for API URL, or empty string for relative paths in production
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
 export const api = {
     async uploadResume(file) {

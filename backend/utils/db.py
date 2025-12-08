@@ -1,17 +1,7 @@
 """
 Database utility functions for TraqCheck
+Re-exports from database.connection for backward compatibility
 """
-import sqlite3
-import os
-from pathlib import Path
+from database.connection import get_db_connection, execute_query, DatabaseConnection
 
-BASE_DIR = Path(__file__).parent.parent
-DATABASE = os.path.join(BASE_DIR, 'database', 'traqcheck.db')
-
-
-def get_db_connection():
-    """Create database connection with row factory"""
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+__all__ = ['get_db_connection', 'execute_query', 'DatabaseConnection']

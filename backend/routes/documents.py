@@ -8,7 +8,7 @@ import uuid
 import mimetypes
 from datetime import datetime
 from pathlib import Path
-from utils.db import get_db_connection
+from database.connection import get_db_connection
 
 documents_bp = Blueprint('documents', __name__)
 

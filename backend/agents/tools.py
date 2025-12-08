@@ -217,18 +217,14 @@ def update_candidate_document_status(
     Returns:
         Dict with success status and updated fields
     """
-    import sqlite3
-    from pathlib import Path
+    from database.connection import get_db_connection
     from datetime import datetime
     
     try:
-        # Database path
-        db_path = Path(__file__).parent.parent / 'database' / 'traqcheck.db'
-        
         # Current timestamp
         now = datetime.now().isoformat()
         
-        conn = sqlite3.connect(str(db_path))
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Update candidate document status
@@ -358,13 +354,11 @@ def get_candidate_by_id(candidate_id: str) -> Dict[str, Any]:
     Returns:
         Dict with candidate data or error message
     """
-    import sqlite3
+    from database.connection import get_db_connection
     import json
     
     try:
-        db_path = "database/traqcheck.db"
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -542,7 +536,7 @@ def save_candidate_to_db(candidate_json: str, resume_path: str) -> Dict[str, Any
     Returns:
         Dict with success status, candidate_id, is_update flag, and message
     """
-    import sqlite3
+    from database.connection import get_db_connection
     import uuid
     import json
     from datetime import datetime
@@ -553,8 +547,7 @@ def save_candidate_to_db(candidate_json: str, resume_path: str) -> Dict[str, Any
         email = candidate.get('email', '')
         
         # Connect to database
-        db_path = "database/traqcheck.db"
-        conn = sqlite3.connect(db_path)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Check if candidate with same email already exists
@@ -661,7 +654,7 @@ def log_agent_action(candidate_id: str, action: str, tool_used: str, input_data:
     Returns:
         Dict with success status and log_id or error message
     """
-    import sqlite3
+    from database.connection import get_db_connection
     import uuid
     from datetime import datetime
     
@@ -670,8 +663,7 @@ def log_agent_action(candidate_id: str, action: str, tool_used: str, input_data:
         log_id = str(uuid.uuid4())
         
         # Connect to database
-        db_path = "database/traqcheck.db"
-        conn = sqlite3.connect(db_path)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Insert log entry

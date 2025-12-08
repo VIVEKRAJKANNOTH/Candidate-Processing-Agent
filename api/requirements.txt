@@ -3,13 +3,13 @@ flask-cors==4.0.0
 flasgger==0.9.7.1
 python-dotenv==1.0.0
 
-# LangChain and AI packages - compatible versions for LangGraph structured output
+# LangChain and AI packages
 langchain==1.0.5
 langchain-core==1.1.1
 langchain-google-genai==3.2.0
 pydantic>=2.10.0
 
-# LangGraph with structured output support (response_format parameter)
+# LangGraph with structured output support
 langgraph==1.0.2
 langgraph-prebuilt==1.0.2
 langgraph-checkpoint==2.1.1

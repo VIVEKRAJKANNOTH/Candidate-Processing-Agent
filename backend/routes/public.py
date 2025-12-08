@@ -4,7 +4,7 @@ Public Blueprint - Public-facing endpoints for candidate portal
 from flask import Blueprint, jsonify, send_file
 import os
 from pathlib import Path
-from utils.db import get_db_connection
+from database.connection import get_db_connection
 
 public_bp = Blueprint('public', __name__)
 
