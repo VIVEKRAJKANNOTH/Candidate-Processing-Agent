@@ -56,7 +56,11 @@ def generate_document_request_email_agent(candidate_id: str) -> Dict[str, Any]:
         
         candidate = candidate_result['candidate']
         deadline = (datetime.now() + timedelta(days=7)).strftime('%B %d, %Y')
-        upload_link = f"{FRONTEND_BASE_URL}/submit-docs?candidate_id={candidate_id}"
+        
+        # Read FRONTEND_BASE_URL at runtime (not import time) for serverless environments
+        import os
+        frontend_url = os.getenv('FRONTEND_BASE_URL', 'http://localhost:5173')
+        upload_link = f"{frontend_url}/submit-docs?candidate_id={candidate_id}"
         
         # Initialize LLM
         llm = ChatGoogleGenerativeAI(
