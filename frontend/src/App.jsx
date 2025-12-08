@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { Routes, Route } from 'react-router-dom'
 import { UploadTab } from './components/UploadTab'
 import { DashboardTab } from './components/DashboardTab'
 import { CandidateProfile } from './components/CandidateProfile'
+import { DocumentSubmission } from './components/DocumentSubmission'
 import './App.css'
 
-function App() {
+function HRDashboard() {
   const [activeTab, setActiveTab] = useState('upload')
   const [selectedCandidateId, setSelectedCandidateId] = useState(null)
 
@@ -61,6 +63,15 @@ function App() {
         )}
       </div>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<HRDashboard />} />
+      <Route path="/submit-docs" element={<DocumentSubmission />} />
+    </Routes>
   )
 }
 

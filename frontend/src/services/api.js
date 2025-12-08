@@ -26,5 +26,22 @@ export const api = {
             method: 'POST'
         })
         return response.json()
+    },
+
+    async getPublicCandidateInfo(id) {
+        const response = await fetch(`${API_BASE}/api/candidates/${id}/public`)
+        return response.json()
+    },
+
+    async submitDocuments(candidateId, files) {
+        const formData = new FormData()
+        formData.append('pan_card', files.panCard)
+        formData.append('aadhaar_card', files.aadhaarCard)
+        const response = await fetch(`${API_BASE}/candidates/${candidateId}/submit-documents`, {
+            method: 'POST',
+            body: formData
+        })
+        return response.json()
     }
 }
+

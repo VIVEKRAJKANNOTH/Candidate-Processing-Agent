@@ -191,6 +191,99 @@ export function CandidateProfile({ candidateId, onBack }) {
                 )}
             </div>
 
+            {/* Documents Section */}
+            <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
+                <h3 className="text-lg font-semibold text-slate-300 mb-4">📄 Documents</h3>
+
+                {/* Resume */}
+                <div className="mb-4">
+                    <h4 className="text-sm font-medium text-slate-400 mb-2">Resume</h4>
+                    {candidate.resume_path ? (
+                        <div className="flex items-center justify-between bg-slate-700/50 rounded-lg p-3">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-indigo-500/20 rounded-lg flex items-center justify-center">
+                                    <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p className="text-white text-sm font-medium">{candidate.resume_path.split('/').pop()}</p>
+                                    <p className="text-slate-500 text-xs">Original Resume</p>
+                                </div>
+                            </div>
+                            <a
+                                href={`http://localhost:5000/api/resume/${candidate.id}/download`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition-colors"
+                            >
+                                ⬇️ Download
+                            </a>
+                        </div>
+                    ) : (
+                        <p className="text-slate-500 text-sm">No resume uploaded</p>
+                    )}
+                </div>
+
+                {/* Submitted Documents */}
+                <div>
+                    <h4 className="text-sm font-medium text-slate-400 mb-2">Submitted Documents</h4>
+                    {candidate.documents && candidate.documents.length > 0 ? (
+                        <div className="space-y-2">
+                            {candidate.documents.map((doc) => (
+                                <div key={doc.id} className="flex items-center justify-between bg-slate-700/50 rounded-lg p-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${doc.type === 'PAN' ? 'bg-orange-500/20' : 'bg-blue-500/20'
+                                            }`}>
+                                            <svg className={`w-5 h-5 ${doc.type === 'PAN' ? 'text-orange-400' : 'text-blue-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p className="text-white text-sm font-medium">{doc.type} Card</p>
+                                            <p className="text-slate-500 text-xs">
+                                                {doc.file_name} • {(doc.file_size / 1024).toFixed(1)} KB
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {/* Only show badge if VERIFIED */}
+                                        {doc.verification_status === 'VERIFIED' && (
+                                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400">
+                                                ✅ VERIFIED
+                                            </span>
+                                        )}
+                                        <a
+                                            href={`http://localhost:5000/api/documents/${doc.id}/view`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition-colors"
+                                        >
+                                            👁️ View
+                                        </a>
+                                        <a
+                                            href={`http://localhost:5000${doc.download_url}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="px-3 py-1.5 bg-slate-600 hover:bg-slate-500 rounded-lg text-sm font-medium transition-colors"
+                                        >
+                                            ⬇️
+                                        </a>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="bg-slate-700/30 rounded-lg p-4 text-center">
+                            <p className="text-slate-500 text-sm">No documents submitted yet</p>
+                            {!isSubmitted && !isVerified && (
+                                <p className="text-slate-600 text-xs mt-1">Request documents from the candidate using the button above</p>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+
             {/* Extracted Data with Confidence Scores */}
             <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
                 <h3 className="text-lg font-semibold text-slate-300 mb-4">Extracted Information</h3>
@@ -230,23 +323,6 @@ export function CandidateProfile({ candidateId, onBack }) {
                     </tbody>
                 </table>
 
-                {/* Skills as Tags */}
-                {skills.length > 0 && (
-                    <div className="mt-6 pt-6 border-t border-slate-700">
-                        <h4 className="text-sm font-medium text-slate-400 mb-3">Skills</h4>
-                        <div className="flex flex-wrap gap-2">
-                            {skills.map((skill, index) => (
-                                <span
-                                    key={index}
-                                    className="px-3 py-1 bg-indigo-500/20 text-indigo-300 rounded-full text-sm border border-indigo-500/30"
-                                >
-                                    {skill}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
                 {/* Metadata */}
                 <div className="mt-6 pt-6 border-t border-slate-700 flex justify-between items-center text-sm">
                     <span className="text-slate-500">ID: {candidate.id}</span>
@@ -256,3 +332,4 @@ export function CandidateProfile({ candidateId, onBack }) {
         </div>
     )
 }
+

@@ -21,3 +21,8 @@ TOP_P = 0.95
 # Application Settings
 REQUIRED_DOCUMENTS = ['AADHAR', 'PAN', 'DEGREE']
 SUPPORTED_RESUME_FORMATS = ['.pdf', '.txt', '.doc', '.docx']
+
+# Frontend URL for document upload links in emails
+# Change this to your production URL when deploying
+FRONTEND_BASE_URL = os.getenv('FRONTEND_BASE_URL', 'http://localhost:5173')
+

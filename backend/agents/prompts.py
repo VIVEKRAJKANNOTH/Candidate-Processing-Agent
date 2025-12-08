@@ -65,7 +65,6 @@ Requirements:
 - Set deadline of 7 days from today
 - Professional sign-off
 
-Upload Link Format: https://traqcheck.com/upload/{candidate_id}
 
 Generate the email with the following structure:
 - Subject line

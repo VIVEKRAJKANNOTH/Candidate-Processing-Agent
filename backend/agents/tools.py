@@ -136,7 +136,6 @@ def send_email_gmail(
         
         # Debug: print env status (redacted password)
         print(f"[DEBUG] GMAIL_ADDRESS: {gmail_address}")
-        print(f"[DEBUG] GMAIL_APP_PASSWORD set: {(gmail_app_password)}")
         
         if not gmail_address or not gmail_app_password:
             # Return mock response for testing when credentials not configured
