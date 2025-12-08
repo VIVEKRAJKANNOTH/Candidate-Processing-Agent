@@ -115,6 +115,14 @@ class DatabaseConnection:
         if self.is_turso:
             remaining = self._last_rows[self._fetch_index:]
             self._fetch_index = len(self._last_rows)
+            
+            # Debug: print raw rows
+            import sys
+            if remaining:
+                print(f"[DEBUG] Raw row[0]: {remaining[0]}", file=sys.stderr)
+                print(f"[DEBUG] Raw row[0] type: {type(remaining[0])}", file=sys.stderr)
+                print(f"[DEBUG] Columns: {self._last_columns}", file=sys.stderr)
+            
             return [TursoRowWrapper(row, self._last_columns) for row in remaining]
         return self._cursor.fetchall()
     
