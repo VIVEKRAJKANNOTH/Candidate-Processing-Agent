@@ -90,8 +90,9 @@ def submit_documents(candidate_id):
             conn.close()
             return jsonify({'success': False, 'error': 'Invalid file type. Only JPG, PNG, and PDF are allowed'}), 400
         
-        # Create upload directory
-        upload_folder = os.path.join(BASE_DIR, 'uploads', 'documents')
+        # Create upload directory - use /tmp for serverless environments
+        import tempfile
+        upload_folder = os.path.join(tempfile.gettempdir(), 'uploads', 'documents')
         os.makedirs(upload_folder, exist_ok=True)
         
         # Generate secure filenames with timestamp

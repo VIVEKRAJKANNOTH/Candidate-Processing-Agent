@@ -219,9 +219,11 @@ def upload_resume():
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
         
-        # Save file temporarily
+        # Save file temporarily - use /tmp for serverless environments
         filename = secure_filename(file.filename)
-        upload_folder = 'uploads/resumes'
+        # Use /tmp for Vercel serverless (read-only filesystem except /tmp)
+        import tempfile
+        upload_folder = os.path.join(tempfile.gettempdir(), 'uploads', 'resumes')
         os.makedirs(upload_folder, exist_ok=True)
         file_path = os.path.join(upload_folder, filename)
         file.save(file_path)
