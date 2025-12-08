@@ -3,6 +3,7 @@ Database connection utility for TraqCheck
 Supports both local SQLite and Turso (libsql) for deployment
 """
 import os
+import re
 from typing import Any, List, Tuple, Optional
 
 # Check if we're in production (Turso) or local (SQLite)
@@ -13,6 +14,39 @@ TURSO_AUTH_TOKEN = os.getenv('TURSO_AUTH_TOKEN')
 USE_TURSO = bool(TURSO_DATABASE_URL and TURSO_AUTH_TOKEN)
 
 
+def extract_columns_from_select(query: str) -> List[str]:
+    """
+    Extract column names from a SELECT query.
+    Handles: SELECT col1, col2 FROM table
+    Does NOT handle: SELECT * FROM table (returns empty list)
+    """
+    query = query.strip().upper()
+    if not query.startswith('SELECT'):
+        return []
+    
+    # Find the part between SELECT and FROM
+    match = re.search(r'SELECT\s+(.+?)\s+FROM', query, re.IGNORECASE | re.DOTALL)
+    if not match:
+        return []
+    
+    columns_part = match.group(1)
+    if '*' in columns_part:
+        return []  # Can't extract from SELECT *
+    
+    # Split by comma and clean up
+    columns = []
+    for col in columns_part.split(','):
+        col = col.strip()
+        # Handle aliases: "column AS alias" or "table.column"
+        if ' AS ' in col.upper():
+            col = col.upper().split(' AS ')[-1].strip()
+        elif '.' in col:
+            col = col.split('.')[-1].strip()
+        columns.append(col.lower())
+    
+    return columns
+
+
 class TursoRowWrapper:
     """
     Wrapper to make Turso rows accessible by column name like sqlite3.Row.
@@ -21,20 +55,17 @@ class TursoRowWrapper:
     def __init__(self, row, columns=None):
         # Handle different row types from libsql
         if isinstance(row, dict):
-            # Row is already a dictionary
             self._data = row
         elif hasattr(row, '_asdict'):
-            # Row is a namedtuple
             self._data = row._asdict()
-        elif hasattr(row, 'keys'):
-            # Row has keys method
+        elif hasattr(row, 'keys') and callable(row.keys):
             self._data = dict(row)
-        elif columns and hasattr(row, '__iter__'):
+        elif columns and (isinstance(row, (list, tuple)) or hasattr(row, '__iter__')):
             # Row is a tuple/list, use provided columns
             row_list = list(row) if not isinstance(row, (list, tuple)) else row
             self._data = dict(zip(columns, row_list))
         else:
-            # Fallback - try to convert to dict
+            # Fallback
             try:
                 self._data = dict(row)
             except (TypeError, ValueError):
@@ -79,19 +110,21 @@ class DatabaseConnection:
     def execute(self, query: str, params: Tuple = ()) -> 'DatabaseConnection':
         """Execute a query with parameters"""
         if self.is_turso:
-            # Turso uses libsql - execute and fetch all rows immediately
             result = self.conn.execute(query, params)
             
-            # Try to get column names from description
+            # Try to get column names from description first
             self._last_columns = []
             if result.description:
                 self._last_columns = [desc[0] for desc in result.description]
             
+            # If description is empty, try to extract from query
+            if not self._last_columns:
+                self._last_columns = extract_columns_from_select(query)
+            
             # Fetch all rows immediately
-            raw_rows = result.fetchall()
-            self._last_rows = raw_rows
+            self._last_rows = result.fetchall()
             self._fetch_index = 0
-            self._rowcount = len(raw_rows)
+            self._rowcount = len(self._last_rows)
             
         else:
             self._cursor.execute(query, params)
@@ -115,14 +148,6 @@ class DatabaseConnection:
         if self.is_turso:
             remaining = self._last_rows[self._fetch_index:]
             self._fetch_index = len(self._last_rows)
-            
-            # Debug: print raw rows
-            import sys
-            if remaining:
-                print(f"[DEBUG] Raw row[0]: {remaining[0]}", file=sys.stderr)
-                print(f"[DEBUG] Raw row[0] type: {type(remaining[0])}", file=sys.stderr)
-                print(f"[DEBUG] Columns: {self._last_columns}", file=sys.stderr)
-            
             return [TursoRowWrapper(row, self._last_columns) for row in remaining]
         return self._cursor.fetchall()
     
@@ -141,7 +166,6 @@ class DatabaseConnection:
     def close(self):
         """Close the database connection"""
         if self.conn:
-            # Turso libsql connections may not have close method
             if hasattr(self.conn, 'close'):
                 try:
                     self.conn.close()
