@@ -361,8 +361,13 @@ def get_candidate_by_id(candidate_id: str) -> Dict[str, Any]:
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Use explicit column names for Turso compatibility (SELECT * doesn't work with empty description)
         cursor.execute("""
-            SELECT * FROM candidates WHERE id = ?
+            SELECT id, name, email, phone, company, designation, skills, 
+                   experience_years, resume_path, confidence_scores, status, 
+                   document_status, documents_requested_at, documents_submitted_at,
+                   created_at, updated_at
+            FROM candidates WHERE id = ?
         """, (candidate_id,))
         
         row = cursor.fetchone()
