@@ -40,11 +40,13 @@ def extract_resume_text(file_path: str) -> str:
 # MAIN PARSING FUNCTION
 # ============================================================================
 
-def parse_with_structured_llm(file_path: str) -> Dict[str, Any]:
+def parse_with_structured_llm(file_path: str, blob_url: str = None) -> Dict[str, Any]:
     """
+    Parse a resume using structured LLM output.
     
     Args:
         file_path: Path to the resume file (PDF or TXT)
+        blob_url: Optional Vercel Blob URL where file was uploaded
         
     Returns:
         Dict with 'success', 'data' (CandidateInfo dict), or 'error'
@@ -118,10 +120,14 @@ Leave candidate_id and db_status empty for now (will be set after database save)
         # Step 4: Save to database (using tools.py)
         print("Step 4: Saving to database...")
         
+        # Use blob_url for resume_path if available (persistent storage)
+        # Otherwise fall back to local file_path
+        resume_storage_path = blob_url if blob_url else file_path
+        
         # Use save_candidate_to_db tool from tools.py
         db_result = save_candidate_to_db.invoke({
             "candidate_json": json.dumps(candidate_data),
-            "resume_path": file_path
+            "resume_path": resume_storage_path
         })
         
         if db_result.get('success'):

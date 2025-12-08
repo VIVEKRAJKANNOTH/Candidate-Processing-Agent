@@ -1,7 +1,7 @@
 """
 Documents Blueprint - Document upload, download, and view routes
 """
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, redirect
 import os
 import json
 import uuid
@@ -92,6 +92,8 @@ def submit_documents(candidate_id):
         
         # Create upload directory - use /tmp for serverless environments
         import tempfile
+        from utils.blob_storage import upload_to_blob, is_blob_enabled
+        
         upload_folder = os.path.join(tempfile.gettempdir(), 'uploads', 'documents')
         os.makedirs(upload_folder, exist_ok=True)
         
@@ -104,16 +106,38 @@ def submit_documents(candidate_id):
         pan_filename = f"{candidate_id}_PAN_{timestamp}.{pan_ext}"
         aadhaar_filename = f"{candidate_id}_AADHAAR_{timestamp}.{aadhaar_ext}"
         
-        pan_path = os.path.join(upload_folder, pan_filename)
-        aadhaar_path = os.path.join(upload_folder, aadhaar_filename)
+        # Read file bytes for blob upload
+        pan_bytes = pan_file.read()
+        aadhaar_bytes = aadhaar_file.read()
+        pan_file.seek(0)
+        aadhaar_file.seek(0)
         
-        # Save files
-        pan_file.save(pan_path)
-        aadhaar_file.save(aadhaar_path)
+        # Try Vercel Blob first, use paths for storage
+        pan_path = None
+        aadhaar_path = None
+        
+        if is_blob_enabled():
+            pan_blob = upload_to_blob(pan_bytes, pan_filename, "documents")
+            aadhaar_blob = upload_to_blob(aadhaar_bytes, aadhaar_filename, "documents")
+            
+            if pan_blob.get("success"):
+                pan_path = pan_blob.get("url")
+            if aadhaar_blob.get("success"):
+                aadhaar_path = aadhaar_blob.get("url")
+        
+        # Fallback to local /tmp if blob failed
+        if not pan_path:
+            local_pan = os.path.join(upload_folder, pan_filename)
+            pan_file.save(local_pan)
+            pan_path = local_pan
+        if not aadhaar_path:
+            local_aadhaar = os.path.join(upload_folder, aadhaar_filename)
+            aadhaar_file.save(local_aadhaar)
+            aadhaar_path = local_aadhaar
         
         # Get file sizes
-        pan_size = os.path.getsize(pan_path)
-        aadhaar_size = os.path.getsize(aadhaar_path)
+        pan_size = len(pan_bytes)
+        aadhaar_size = len(aadhaar_bytes)
         
         # Insert document records
         pan_doc_id = str(uuid.uuid4())
@@ -200,6 +224,11 @@ def download_document(document_id):
         
         file_path = document['file_path']
         
+        # If file_path is a blob URL, redirect to it
+        if file_path and file_path.startswith('http'):
+            return redirect(file_path)
+        
+        # Local file fallback
         if not os.path.exists(file_path):
             return jsonify({'error': 'File not found on server'}), 404
         
@@ -246,6 +275,11 @@ def view_document(document_id):
         
         file_path = document['file_path']
         
+        # If file_path is a blob URL, redirect to it
+        if file_path and file_path.startswith('http'):
+            return redirect(file_path)
+        
+        # Local file fallback
         if not os.path.exists(file_path):
             return jsonify({'error': 'File not found on server'}), 404
         

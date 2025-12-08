@@ -209,6 +209,7 @@ def upload_resume():
     """
     try:
         from agents.parser import parse_with_structured_llm
+        from utils.blob_storage import upload_to_blob, is_blob_enabled
         
         # Check if file is present
         if 'resume' not in request.files:
@@ -219,9 +220,19 @@ def upload_resume():
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
         
-        # Save file temporarily - use /tmp for serverless environments
         filename = secure_filename(file.filename)
-        # Use /tmp for Vercel serverless (read-only filesystem except /tmp)
+        file_bytes = file.read()
+        file.seek(0)  # Reset for local save if needed
+        
+        # Try Vercel Blob first, fallback to local /tmp
+        blob_url = None
+        if is_blob_enabled():
+            blob_result = upload_to_blob(file_bytes, filename, "resumes")
+            if blob_result.get("success"):
+                blob_url = blob_result.get("url")
+                print(f"[BLOB] Resume uploaded to: {blob_url}")
+        
+        # Always save locally for parsing (LLM needs file path)
         import tempfile
         upload_folder = os.path.join(tempfile.gettempdir(), 'uploads', 'resumes')
         os.makedirs(upload_folder, exist_ok=True)
@@ -229,7 +240,7 @@ def upload_resume():
         file.save(file_path)
         
         # Parse with direct structured output parser
-        result = parse_with_structured_llm(file_path)
+        result = parse_with_structured_llm(file_path, blob_url=blob_url)
         
         if result.get('success'):
             return jsonify(result), 200

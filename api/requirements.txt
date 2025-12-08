@@ -21,3 +21,6 @@ python-docx==1.1.2
 
 # Turso/libSQL support for cloud database
 libsql-experimental==0.0.41
+
+# Vercel Blob storage for persistent file uploads
+vercel-blob
