@@ -19,6 +19,10 @@
             "dest": "/api/index.py"
         },
         {
+            "src": "/candidates$",
+            "dest": "/api/index.py"
+        },
+        {
             "src": "/candidates/(.*)",
             "dest": "/api/index.py"
         },
