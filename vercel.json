@@ -35,7 +35,16 @@
             "dest": "/api/index.py"
         },
         {
-            "handle": "filesystem"
+            "src": "/assets/(.*)",
+            "dest": "/frontend/assets/$1"
+        },
+        {
+            "src": "/vite.svg",
+            "dest": "/frontend/vite.svg"
+        },
+        {
+            "src": "/(.*\\.(js|css|ico|png|jpg|jpeg|svg|woff|woff2|ttf|eot))",
+            "dest": "/frontend/$1"
         },
         {
             "src": "/(.*)",
