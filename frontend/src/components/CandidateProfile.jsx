@@ -143,10 +143,6 @@ export function CandidateProfile({ candidateId, onBack }) {
                     {/* Action Button */}
                     {isVerified ? (
                         <span className="text-green-400 font-medium">✅ Verified</span>
-                    ) : isSubmitted ? (
-                        <button className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition-colors">
-                            🔍 Verify Documents
-                        </button>
                     ) : (
                         <button
                             onClick={handleRequestDocuments}
@@ -159,7 +155,7 @@ export function CandidateProfile({ candidateId, onBack }) {
                                     Sending...
                                 </>
                             ) : (
-                                <>📧 {isRequested ? 'Resend Request' : 'Request Documents'}</>
+                                <>📧 {(isRequested || isSubmitted) ? 'Resend Request' : 'Request Documents'}</>
                             )}
                         </button>
                     )}
