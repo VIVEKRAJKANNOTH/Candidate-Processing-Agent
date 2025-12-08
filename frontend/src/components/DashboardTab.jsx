@@ -1,13 +1,10 @@
 import { useState, useEffect } from 'react'
 import { api } from '../services/api'
-import { CandidateModal } from './CandidateModal'
 
-export function DashboardTab() {
+export function DashboardTab({ onSelectCandidate }) {
     const [candidates, setCandidates] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
-    const [selectedCandidate, setSelectedCandidate] = useState(null)
-    const [modalLoading, setModalLoading] = useState(false)
 
     useEffect(() => {
         fetchCandidates()
@@ -24,15 +21,12 @@ export function DashboardTab() {
         }
     }
 
-    const openCandidateModal = async (id) => {
-        setModalLoading(true)
-        try {
-            const data = await api.getCandidate(id)
-            setSelectedCandidate(data)
-        } catch (err) {
-            setError('Failed to load candidate details')
-        } finally {
-            setModalLoading(false)
+    const getDocStatusColor = (status) => {
+        switch (status?.toUpperCase()) {
+            case 'REQUESTED': return 'bg-yellow-500/20 text-yellow-400'
+            case 'SUBMITTED': return 'bg-blue-500/20 text-blue-400'
+            case 'VERIFIED': return 'bg-green-500/20 text-green-400'
+            default: return 'bg-slate-500/20 text-slate-400'
         }
     }
 
@@ -70,13 +64,14 @@ export function DashboardTab() {
                                 <th className="text-left py-3 px-4 text-slate-300 font-medium">Email</th>
                                 <th className="text-left py-3 px-4 text-slate-300 font-medium">Company</th>
                                 <th className="text-left py-3 px-4 text-slate-300 font-medium">Status</th>
+                                <th className="text-left py-3 px-4 text-slate-300 font-medium">Documents</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-700">
                             {candidates.map(c => (
                                 <tr
                                     key={c.id}
-                                    onClick={() => openCandidateModal(c.id)}
+                                    onClick={() => onSelectCandidate(c.id)}
                                     className="hover:bg-slate-700/30 transition-colors cursor-pointer"
                                 >
                                     <td className="py-3 px-4 text-slate-500 font-mono text-sm">{c.id.slice(0, 8)}</td>
@@ -89,23 +84,17 @@ export function DashboardTab() {
                                             {c.status}
                                         </span>
                                     </td>
+                                    <td className="py-3 px-4">
+                                        <span className={`px-2 py-1 rounded text-xs font-medium ${getDocStatusColor(c.document_status)}`}>
+                                            {c.document_status || 'NOT_REQUESTED'}
+                                        </span>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
             )}
-
-            {modalLoading && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-                    <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                </div>
-            )}
-
-            <CandidateModal
-                candidate={selectedCandidate}
-                onClose={() => setSelectedCandidate(null)}
-            />
         </div>
     )
 }

@@ -224,7 +224,7 @@ def update_candidate_document_status(
     
     try:
         # Database path
-        db_path = Path(__file__).parent.parent / 'database' / 'candidates.db'
+        db_path = Path(__file__).parent.parent / 'database' / 'traqcheck.db'
         
         # Current timestamp
         now = datetime.now().isoformat()

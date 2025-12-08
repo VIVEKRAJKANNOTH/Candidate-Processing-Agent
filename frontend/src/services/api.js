@@ -19,5 +19,12 @@ export const api = {
     async getCandidate(id) {
         const response = await fetch(`${API_BASE}/candidates/${id}`)
         return response.json()
+    },
+
+    async requestDocuments(candidateId) {
+        const response = await fetch(`${API_BASE}/candidates/${candidateId}/request-documents`, {
+            method: 'POST'
+        })
+        return response.json()
     }
 }

@@ -114,7 +114,7 @@ def list_candidates():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        cursor.execute("SELECT id, name, email, company, status FROM candidates")
+        cursor.execute("SELECT id, name, email, company, status, document_status FROM candidates")
         candidates = cursor.fetchall()
         conn.close()
         
@@ -124,7 +124,8 @@ def list_candidates():
                 'name': c['name'],
                 'email': c['email'],
                 'company': c['company'] or '-',
-                'status': c['status']
+                'status': c['status'],
+                'document_status': c['document_status'] or 'NOT_REQUESTED'
             }
             for c in candidates
         ]

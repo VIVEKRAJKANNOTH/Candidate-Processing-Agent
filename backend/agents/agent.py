@@ -190,8 +190,23 @@ Generate a professional email requesting PAN and Aadhaar documents, then use the
         # Extract structured response
         structured_response = result.get("structured_response")
         
-        # Check if email was sent by looking at tool messages
+        # Count LLM calls by analyzing messages
         messages = result.get("messages", [])
+        llm_calls = 0
+        tool_calls = 0
+        for msg in messages:
+            msg_type = type(msg).__name__
+            if msg_type == 'AIMessage':
+                llm_calls += 1
+            elif msg_type == 'ToolMessage':
+                tool_calls += 1
+        
+        print(f"\n[AGENT STATS]")
+        print(f"  LLM Calls: {llm_calls}")
+        print(f"  Tool Calls: {tool_calls}")
+        print(f"  Total Messages: {len(messages)}")
+        
+        # Check if email was sent by looking at tool messages
         send_result = None
         for msg in messages:
             if hasattr(msg, 'name') and msg.name == 'send_email_gmail':
@@ -209,24 +224,29 @@ Generate a professional email requesting PAN and Aadhaar documents, then use the
             
             # If email was sent successfully, update DB and log the action
             if send_result and send_result.get('success'):
-                # Update candidate document status
-                db_update = update_candidate_document_status.invoke({
-                    'candidate_id': candidate_id,
-                    'document_status': 'REQUESTED'
-                })
+                print(f"\n[DEBUG] Email sent successfully, updating DB...")
+                print(f"[DEBUG] candidate_id: {candidate_id}")
+                
+                # Update candidate document status - call the underlying function directly
+                db_update = update_candidate_document_status.func(
+                    candidate_id=candidate_id,
+                    document_status='REQUESTED'
+                )
+                print(f"[DEBUG] db_update result: {db_update}")
                 
                 # Log the agent action
-                log_result = log_agent_action.invoke({
-                    'candidate_id': candidate_id,
-                    'action': 'DOCUMENT_REQUEST_SENT',
-                    'tool_used': 'send_email_gmail',
-                    'input_data': json.dumps({
+                log_result = log_agent_action.func(
+                    candidate_id=candidate_id,
+                    action='DOCUMENT_REQUEST_SENT',
+                    tool_used='send_email_gmail',
+                    input_data=json.dumps({
                         'to_email': email_data.get('candidate_email'),
                         'subject': email_data.get('subject'),
                         'upload_link': upload_link
                     }),
-                    'output_data': json.dumps(send_result)
-                })
+                    output_data=json.dumps(send_result)
+                )
+                print(f"[DEBUG] log_result: {log_result}")
                 
                 return {
                     'success': True,
