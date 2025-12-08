@@ -14,9 +14,31 @@ USE_TURSO = bool(TURSO_DATABASE_URL and TURSO_AUTH_TOKEN)
 
 
 class TursoRowWrapper:
-    """Wrapper to make Turso rows accessible by column name like sqlite3.Row"""
-    def __init__(self, row, columns):
-        self._data = dict(zip(columns, row)) if row else {}
+    """
+    Wrapper to make Turso rows accessible by column name like sqlite3.Row.
+    Handles various row formats from libsql_experimental.
+    """
+    def __init__(self, row, columns=None):
+        # Handle different row types from libsql
+        if isinstance(row, dict):
+            # Row is already a dictionary
+            self._data = row
+        elif hasattr(row, '_asdict'):
+            # Row is a namedtuple
+            self._data = row._asdict()
+        elif hasattr(row, 'keys'):
+            # Row has keys method
+            self._data = dict(row)
+        elif columns and hasattr(row, '__iter__'):
+            # Row is a tuple/list, use provided columns
+            row_list = list(row) if not isinstance(row, (list, tuple)) else row
+            self._data = dict(zip(columns, row_list))
+        else:
+            # Fallback - try to convert to dict
+            try:
+                self._data = dict(row)
+            except (TypeError, ValueError):
+                self._data = {}
     
     def __getitem__(self, key):
         if isinstance(key, int):
@@ -46,8 +68,9 @@ class DatabaseConnection:
         self.conn = None
         self.is_turso = USE_TURSO
         self._last_columns = []
-        self._last_rows = []  # Store fetched rows
+        self._last_rows = []
         self._fetch_index = 0
+        self._rowcount = 0
     
     def cursor(self):
         """Return self as cursor for compatibility with sqlite3 patterns"""
@@ -58,13 +81,18 @@ class DatabaseConnection:
         if self.is_turso:
             # Turso uses libsql - execute and fetch all rows immediately
             result = self.conn.execute(query, params)
-            # Get column names from description
-            self._last_columns = [desc[0] for desc in (result.description or [])]
-            # Fetch all rows immediately and store them
-            self._last_rows = result.fetchall()
+            
+            # Try to get column names from description
+            self._last_columns = []
+            if result.description:
+                self._last_columns = [desc[0] for desc in result.description]
+            
+            # Fetch all rows immediately
+            raw_rows = result.fetchall()
+            self._last_rows = raw_rows
             self._fetch_index = 0
-            # Store rowcount
-            self._rowcount = result.rowcount if hasattr(result, 'rowcount') else len(self._last_rows)
+            self._rowcount = len(raw_rows)
+            
         else:
             self._cursor.execute(query, params)
             if self._cursor.description:
@@ -94,7 +122,7 @@ class DatabaseConnection:
     def rowcount(self):
         """Return number of affected rows"""
         if self.is_turso:
-            return getattr(self, '_rowcount', 0)
+            return self._rowcount
         return self._cursor.rowcount
     
     def commit(self):
@@ -110,7 +138,7 @@ class DatabaseConnection:
                 try:
                     self.conn.close()
                 except Exception:
-                    pass  # Ignore close errors
+                    pass
             self.conn = None
 
 
@@ -118,13 +146,6 @@ def get_db_connection() -> DatabaseConnection:
     """
     Get a database connection.
     Returns a DatabaseConnection that works with both SQLite and Turso.
-    
-    Usage:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM candidates WHERE id = ?", (id,))
-        result = cursor.fetchone()
-        conn.close()
     """
     db = DatabaseConnection()
     
@@ -137,7 +158,6 @@ def get_db_connection() -> DatabaseConnection:
     else:
         import sqlite3
         from pathlib import Path
-        # Local SQLite fallback
         db_path = Path(__file__).parent / 'traqcheck.db'
         db.conn = sqlite3.connect(str(db_path))
         db.conn.row_factory = sqlite3.Row
